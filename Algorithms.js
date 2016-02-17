@@ -109,33 +109,12 @@ function convertToWorldCoordinate(vertices,mvMatrix){
     }
     return rVertices;
 }
-function compareFaces(face1,face2,mvMatrix){
-    var face1Pts = convertToWorldCoordinate(face1.getVerticesPos(),mvMatrix);
-    var face2Pts = convertToWorldCoordinate(face2.getVerticesPos(),mvMatrix);
-    if(face1Pts.length != face2Pts.length){
-        return false;
-    }
-    for(var g = 0; g < face1Pts.length;g++){
-        console.log(face1Pts[g],face2Pts[g]);
-        if(face1Pts[g] != face2Pts[g]){
-            return false;
-        }
-    }
-    console.log("true");
-    return true;
-}
+
 function createReflections(scene,order,obj){
     var sources = [];
-    console.log(obj);
     for(var c = 0; c < scene.children.length;c++){                      //Iterate through children of Scene starting point
         for(var m = 0; m < scene.children[c].mesh.faces.length;m++){    //Iterate over every face of the child
-            if(obj.genFace == null || !compareFaces(obj.genFace,scene.children[c].mesh.faces[m],scene.children[c].transform)){         //Current objs genFace != current face
-                if(order == 2){
-                    console.log("faces");
-                    console.log(obj.genFace);
-                    console.log(scene.children[c].mesh.faces[m]);
-                    console.log("facesEnd");
-                }
+            if(obj.genFace == null || !(obj.genFace == scene.children[c].mesh.faces[m])){         //Current objs genFace != current face
                 var norm = vec3.create();
                 var ba = vec3.create();
                 var bc = vec3.create();
@@ -151,17 +130,16 @@ function createReflections(scene,order,obj){
                 sources.push({
                   pos: reflect_pt,
                   order: order,
-                  rcoeff: scene.children[c].mesh.rcoeff,
+                  rcoeff: obj.rcoeff,
                   parent: obj,
                   genFace: scene.children[c].mesh.faces[m]
               });
           }
         }
         if ('children' in scene.children[c]) {
-            for(var x = 0; x < scene.children[c].length;x++){
-                if(scene.children[c].children[x].order == order-1){
-                    sources.push.apply(sources,createReflections(scene,order+1,obj));
-                }
+            for(var x = 0; x < scene.children[c].children.length;x++){
+                console.log("what?");
+                sources.push.apply(sources,createReflections(scene.children[c],order,obj));
             }
         }
     }
@@ -266,7 +244,7 @@ function addImageSourcesFunctions(scene) {
                 }
             }
         }
-        console.log(scene.imsources);
+        console.log(scene.imsources.length);
     }
 
     //Purpose: Based on the extracted image sources, trace back paths from the
@@ -285,6 +263,17 @@ function addImageSourcesFunctions(scene) {
     //Don't forget the direct path from source to receiver!
     scene.extractPaths = function() {
         scene.paths = [];
+        console.log(scene.receiver);
+        for(var q = 0; q < scene.imsources.length; q++){
+            var path = [];
+            if(scene.imsources[q].order == 1){
+                    console.log(scene.imsources[q]);
+                    var path = [scene.source,scene.imsources[q],scene.receiver];
+                    //scene.rayIntersectFaces = function(P0, V, node, mvMatrix, excludeFace)
+                    scene.paths.push(path);
+            }
+
+        }
 
         //TODO: Finish this. Extract the rest of the paths by backtracing from
         //the image sources you calculated.  Return an array of arrays in
