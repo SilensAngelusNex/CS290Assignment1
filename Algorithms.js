@@ -100,7 +100,56 @@ function rayIntersectPolygon(P0, V, vertices, mvMatrix) {
     //intersections in order of occurrence to figure out which one happened first
 }
 
-
+function convertToWorldCoordinate(vertices,mvMatrix){
+    var rVertices = [];
+    for (var i = 0; i < vertices.length; i++) {
+        var rVec = vec3.create();
+        vec3.transformMat4(rVec, vertices[i], mvMatrix)
+        rVertices.push(rVec);
+    }
+    return rVertices;
+}
+function createReflections(order,obj,source){
+    var sources = [];
+    console.log(obj);
+    for(var m = 0; m < obj.mesh.faces.length;m++){                         // Reflect over everyface in the
+        if(obj.parent == null || obj.genFace != obj.mesh.faces[m]){ // don't go back over the same face!!
+            if(order == 2){
+                console.log("faces");
+                console.log(obj.genFace);
+                console.log(obj.mesh.faces[m]);
+                console.log("facesEnd");
+            }
+            var norm = vec3.create();
+            var ba = vec3.create();
+            var bc = vec3.create();
+            var pa = vec3.create();
+            var reflect_pt = vec3.create(); // Return pt
+            var vertices = convertToWorldCoordinate(obj.mesh.faces[m].getVerticesPos(),obj.transform);
+            vec3.subtract(ba,vertices[0],vertices[1]);
+            vec3.subtract(bc,vertices[2],vertices[1]);
+            vec3.subtract(pa,vertices[0], source.pos); // P is the source in world coordinates
+            vec3.cross(norm,ba,bc);
+            var proj = projVector(pa,norm);
+            vec3.scaleAndAdd(reflect_pt,source.pos,proj,2);
+            sources.push({
+              pos: reflect_pt,
+              order: order,
+              rcoeff: obj.mesh.rcoeff,
+              parent: obj,
+              genFace: obj.mesh.faces[m]
+          });
+      }
+    }
+    if ('children' in obj) {
+        for(var x = 0; x < obj.children.length;x++){
+            if(obj.children[x].order == order-1){
+                sources.push.apply(sources,createReflections(order,obj.children[x],source));
+            }
+        }
+    }
+    return sources;
+}
 function addImageSourcesFunctions(scene) {
     //Setup all of the functions that students fill in that operate directly
     //on the scene
@@ -189,40 +238,18 @@ function addImageSourcesFunctions(scene) {
         //in world coordinates, not the faces in the original mesh coordinates
         //See the "rayIntersectFaces" function above for an example of how to loop
         //through faces in a mesh
-        if(order > 3){ return; }
 
+        console.log(scene.source);
 
-        for (i = 1; i < order; i++){
-            for (point in scene.imsources){
-                if (point.order == order - 1){
-                    for (var f = 0; f < mesh.faces.length; f++) {
-                        if(mesh.faces[f] != scene.source.parent){
-                            // Convert to world coordinates
-                            var norm = vec3.create();
-                            var ba = vec3.create();
-                            var bc = vec3.create();
-                            var pa = vec3.create();
-                            var reflect_pt = vec.create(); // Return pt
-                            var vertices = mesh.faces[f].getVerticesPos();
-                            vec3.subtract(ba,vertices[0],vertices[1]);
-                            vec3.subtract(bc,vertices[2],vertices[1]);
-                            vec3.subtract(pa,vertices[0], point.pos); // P is the source in world coordinates
-                            vec3.cross(norm,ba,bc);
-                            var proj = projVector(pa,norm);
-                            vec3.scaleAndAdd(reflect_pt,scene.source,proj,2);
+        for(var p = 1; p <= order;p++){
+            for(var i = 0; i < scene.children.length; i++) {
+                if(!('order' in scene.children[i]) || scene.children[i].order == p-1){
 
-                            scene.imsources +=  {
-                              pos: reflect_pt,
-                              order: i,
-                              rcoeff: mesh.rcoeff,
-                              parent: point,
-                              genFace: mesh.faces[f]
-                            }
-                        }
-                    }
+                    scene.imsources.push.apply(scene.imsources,createReflections(p,scene.children[i],scene.source));
                 }
             }
         }
+        console.log(scene.imsources);
     }
 
     //Purpose: Based on the extracted image sources, trace back paths from the
