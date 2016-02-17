@@ -109,45 +109,63 @@ function convertToWorldCoordinate(vertices,mvMatrix){
     }
     return rVertices;
 }
-function createReflections(order,obj,source){
+function compareFaces(face1,face2,mvMatrix){
+    var face1Pts = convertToWorldCoordinate(face1.getVerticesPos(),mvMatrix);
+    var face2Pts = convertToWorldCoordinate(face2.getVerticesPos(),mvMatrix);
+    if(face1Pts.length != face2Pts.length){
+        return false;
+    }
+    for(var g = 0; g < face1Pts.length;g++){
+        console.log(face1Pts[g],face2Pts[g]);
+        if(face1Pts[g] != face2Pts[g]){
+            return false;
+        }
+    }
+    console.log("true");
+    return true;
+}
+function createReflections(scene,order,obj){
     var sources = [];
     console.log(obj);
-    for(var m = 0; m < obj.mesh.faces.length;m++){                         // Reflect over everyface in the
-        if(obj.parent == null || obj.genFace != obj.mesh.faces[m]){ // don't go back over the same face!!
-            if(order == 2){
-                console.log("faces");
-                console.log(obj.genFace);
-                console.log(obj.mesh.faces[m]);
-                console.log("facesEnd");
-            }
-            var norm = vec3.create();
-            var ba = vec3.create();
-            var bc = vec3.create();
-            var pa = vec3.create();
-            var reflect_pt = vec3.create(); // Return pt
-            var vertices = convertToWorldCoordinate(obj.mesh.faces[m].getVerticesPos(),obj.transform);
-            vec3.subtract(ba,vertices[0],vertices[1]);
-            vec3.subtract(bc,vertices[2],vertices[1]);
-            vec3.subtract(pa,vertices[0], source.pos); // P is the source in world coordinates
-            vec3.cross(norm,ba,bc);
-            var proj = projVector(pa,norm);
-            vec3.scaleAndAdd(reflect_pt,source.pos,proj,2);
-            sources.push({
-              pos: reflect_pt,
-              order: order,
-              rcoeff: obj.mesh.rcoeff,
-              parent: obj,
-              genFace: obj.mesh.faces[m]
-          });
-      }
-    }
-    if ('children' in obj) {
-        for(var x = 0; x < obj.children.length;x++){
-            if(obj.children[x].order == order-1){
-                sources.push.apply(sources,createReflections(order,obj.children[x],source));
+    for(var c = 0; c < scene.children.length;c++){                      //Iterate through children of Scene starting point
+        for(var m = 0; m < scene.children[c].mesh.faces.length;m++){    //Iterate over every face of the child
+            if(obj.genFace == null || !compareFaces(obj.genFace,scene.children[c].mesh.faces[m],scene.children[c].transform)){         //Current objs genFace != current face
+                if(order == 2){
+                    console.log("faces");
+                    console.log(obj.genFace);
+                    console.log(scene.children[c].mesh.faces[m]);
+                    console.log("facesEnd");
+                }
+                var norm = vec3.create();
+                var ba = vec3.create();
+                var bc = vec3.create();
+                var pa = vec3.create();
+                var reflect_pt = vec3.create(); // Return pt
+                var vertices = convertToWorldCoordinate(scene.children[c].mesh.faces[m].getVerticesPos(),scene.children[c].transform);
+                vec3.subtract(ba,vertices[0],vertices[1]);
+                vec3.subtract(bc,vertices[2],vertices[1]);
+                vec3.subtract(pa,vertices[0], obj.pos); // P is the source in world coordinates
+                vec3.cross(norm,ba,bc);
+                var proj = projVector(pa,norm);
+                vec3.scaleAndAdd(reflect_pt,obj.pos,proj,2);
+                sources.push({
+                  pos: reflect_pt,
+                  order: order,
+                  rcoeff: scene.children[c].mesh.rcoeff,
+                  parent: obj,
+                  genFace: scene.children[c].mesh.faces[m]
+              });
+          }
+        }
+        if ('children' in scene.children[c]) {
+            for(var x = 0; x < scene.children[c].length;x++){
+                if(scene.children[c].children[x].order == order-1){
+                    sources.push.apply(sources,createReflections(scene,order+1,obj));
+                }
             }
         }
     }
+
     return sources;
 }
 function addImageSourcesFunctions(scene) {
@@ -239,13 +257,12 @@ function addImageSourcesFunctions(scene) {
         //See the "rayIntersectFaces" function above for an example of how to loop
         //through faces in a mesh
 
-        console.log(scene.source);
+        console.log(scene);
 
         for(var p = 1; p <= order;p++){
-            for(var i = 0; i < scene.children.length; i++) {
-                if(!('order' in scene.children[i]) || scene.children[i].order == p-1){
-
-                    scene.imsources.push.apply(scene.imsources,createReflections(p,scene.children[i],scene.source));
+            for(var i = 0; i < scene.imsources.length; i++) {
+                if(scene.imsources[i].order == p-1){
+                    scene.imsources.push.apply(scene.imsources,createReflections(scene,p,scene.imsources[i]));
                 }
             }
         }
