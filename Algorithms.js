@@ -31,7 +31,7 @@ function inPolygon(p, verticies){
   var pArea = areaAroundPoint(p, verticies);
   var tArea = areaAroundPoint(verticies[0], verticies);
 
-  if (abs(pArea-tArea) <= 1e-4){
+  if (Math.abs(pArea-tArea) <= 1e-4){
     return true;
   }
   return false;
@@ -48,13 +48,13 @@ function inPolygon(p, verticies){
 //(you can assume that all polygons are convex and use the area method)
 function rayIntersectPolygon(P0, V, vertices, mvMatrix) {
     //TODO: Fill this in
-
     //Step 1: Make a new array of vec3s which holds "vertices" transformed
     //to world coordinates (hint: vec3 has a function "transformMat4" which is useful)
     var tVerticies = [];
     for (vertex in vertices){
       var tVertex = vec3.create();
       vec3.transformMat4(tVertex, vertex, mvMatrix);
+      tVerticies.push(tVertex);
     }
 
     //Step 2: Compute the plane normal of the plane spanned by the transformed vertices
@@ -68,13 +68,10 @@ function rayIntersectPolygon(P0, V, vertices, mvMatrix) {
     vec3.cross(norm, bc, ba);
 
     //Step 3: Perform ray intersect plane
-    var denom;
-    var numer;
+    var denom = vec3.dot(V, norm);
+    var numer = -1 * vec3.dot(P0, norm);
 
-    denom = vec3.dot(V, norm);
-    numer = -1 * vec3.dot(P0, norm);
-
-    if(demon == 0){
+    if(denom == 0){
       return null;
     }
 
@@ -138,7 +135,6 @@ function createReflections(scene,order,obj){
         }
         if ('children' in scene.children[c]) {
             for(var x = 0; x < scene.children[c].children.length;x++){
-                console.log("what?");
                 sources.push.apply(sources,createReflections(scene.children[c],order,obj));
             }
         }
@@ -263,17 +259,30 @@ function addImageSourcesFunctions(scene) {
     //Don't forget the direct path from source to receiver!
     scene.extractPaths = function() {
         scene.paths = [];
-        console.log(scene.receiver);
-        for(var q = 0; q < scene.imsources.length; q++){
-            var path = [];
-            if(scene.imsources[q].order == 1){
-                    console.log(scene.imsources[q]);
-                    var path = [scene.source,scene.imsources[q],scene.receiver];
-                    //scene.rayIntersectFaces = function(P0, V, node, mvMatrix, excludeFace)
-                    scene.paths.push(path);
-            }
 
+
+        var P0 = scene.imsources[scene.imsources.length-1];
+        var V = vec3.create();
+        vec3.subtract(V,P0.pos,P0.parent.pos);
+        console.log(scene);
+        console.log(scene.rayIntersectFaces(P0.pos, V, scene, scene.children[0].transform, scene.children[0].mesh.faces[0]));
+
+        /*var order = scene.imsources[scene.imsources.length-1].order;
+        console.log(order);
+        for(var q = 0; q < scene.imsources.length; q++){
+            var path = [scene.source];
+            var node = scene.imsources[q];
+            if(node.order == order){
+                while(node.order > 0){
+                    path.push(node);
+                    console.log(node);
+                    node = node.parent;
+                }
+            }
+            path.push(scene.receiver);
+            scene.paths.push(path);
         }
+        console.log(scene.paths);*/
 
         //TODO: Finish this. Extract the rest of the paths by backtracing from
         //the image sources you calculated.  Return an array of arrays in
