@@ -79,6 +79,11 @@ function rayIntersectPolygon(P0, V, vertices, mvMatrix) {
     }
 
     var tIntersect = numer / denom;
+
+    if(tIntersect < 0){
+        return null;
+    }
+
     var P = vec3.create();
     vec3.scaleAndAdd(P, P0, V, tIntersect);
 
@@ -109,41 +114,6 @@ function convertToWorldCoordinate(vertices,mvMatrix){
     return rVertices;
 }
 
-function createReflections(scene,order,obj){
-    var sources = [];
-    for(var c = 0; c < scene.children.length;c++){                      //Iterate through children of Scene starting point
-        for(var m = 0; m < scene.children[c].mesh.faces.length;m++){    //Iterate over every face of the child
-            if(obj.genFace == null || !(obj.genFace == scene.children[c].mesh.faces[m])){         //Current objs genFace != current face
-                var norm = vec3.create();
-                var ba = vec3.create();
-                var bc = vec3.create();
-                var pa = vec3.create();
-                var reflect_pt = vec3.create(); // Return pt
-                var vertices = convertToWorldCoordinate(scene.children[c].mesh.faces[m].getVerticesPos(),scene.children[c].transform);
-                vec3.subtract(ba,vertices[0],vertices[1]);
-                vec3.subtract(bc,vertices[2],vertices[1]);
-                vec3.subtract(pa,vertices[0], obj.pos); // P is the source in world coordinates
-                vec3.cross(norm,ba,bc);
-                var proj = projVector(pa,norm);
-                vec3.scaleAndAdd(reflect_pt,obj.pos,proj,2);
-                sources.push({
-                  pos: reflect_pt,
-                  order: order,
-                  rcoeff: obj.rcoeff,
-                  parent: obj,
-                  genFace: scene.children[c].mesh.faces[m]
-              });
-          }
-        }
-        if ('children' in scene.children[c]) {
-            for(var x = 0; x < scene.children[c].children.length;x++){
-                sources.push.apply(sources,createReflections(scene.children[c],order,obj));
-            }
-        }
-    }
-
-    return sources;
-}
 function addImageSourcesFunctions(scene) {
     //Setup all of the functions that students fill in that operate directly
     //on the scene
@@ -162,8 +132,8 @@ function addImageSourcesFunctions(scene) {
     //will start the recursion at the top of the scene tree in world coordinates
     scene.rayIntersectFaces = function(P0, V, node, mvMatrix, excludeFace) {
         var tmin = Infinity;//The parameter along the ray of the nearest intersection
-        var PMin = null;//The point of intersection corresponding to the nearest interesection
-        var faceMin = null;//The face object corresponding to the nearest intersection
+        var PMin = null;    //The point of intersection corresponding to the nearest interesection
+        var faceMin = null; //The face object corresponding to the nearest intersection
 
         if (node === null) {
             return null;
@@ -207,6 +177,49 @@ function addImageSourcesFunctions(scene) {
         return {tmin:tmin, PMin:PMin, faceMin:faceMin};
     }
 
+    scene.computeImageSourcesHelper = function(node,order,obj,mvMatrix){
+        if('mesh' in node){
+            for(var m = 0; m < node.mesh.faces.length; m++){
+                //Current objs genFace != current face
+                if(obj.genFace == null || !(obj.genFace == node.mesh.faces[m])){
+                    var norm = vec3.create();
+                    var ba = vec3.create();
+                    var bc = vec3.create();
+                    var pa = vec3.create();
+                    var reflect_pt = vec3.create(); // Return pt
+                    var vertices = convertToWorldCoordinate(node.mesh.faces[m].getVerticesPos(),mvMatrix);
+
+                    vec3.subtract(ba,vertices[0],vertices[1]);
+                    vec3.subtract(bc,vertices[2],vertices[1]);
+                    vec3.subtract(pa,vertices[0], obj.pos); // P is the source in world coordinates
+                    vec3.cross(norm,ba,bc);
+
+                    var proj = projVector(pa,norm);
+                    vec3.scaleAndAdd(reflect_pt,obj.pos,proj,2);
+
+                    console.log("face",node.mesh.faces[m].getVerticesPos());
+                    console.log("faceTransformed",vertices);
+
+                    scene.imsources.push({
+                      pos: reflect_pt,
+                      order: order,
+                      rcoeff: obj.rcoeff,
+                      parent: obj,
+                      genFace: node.mesh.faces[m]
+                  });
+              }
+            }
+        }
+        if('children' in node){
+            for (var i = 0; i < node.children.length; i++) {
+                var nextmvMatrix = mat4.create();
+                mat4.mul(nextmvMatrix, mvMatrix, node.children[i].transform);
+
+                scene.computeImageSourcesHelper(node.children[i],order,obj,nextmvMatrix);
+            }
+
+        }
+    }
     //Purpose: Fill in the array scene.imsources[] with a bunch of source
     //objects.  It's up to you what you put in the source objects, but at
     //the very least each object needs a field "pos" describing its position
@@ -236,10 +249,12 @@ function addImageSourcesFunctions(scene) {
 
         console.log(scene);
 
+        var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
+
         for(var p = 1; p <= order;p++){
             for(var i = 0; i < scene.imsources.length; i++) {
                 if(scene.imsources[i].order == p-1){
-                    scene.imsources.push.apply(scene.imsources,createReflections(scene,p,scene.imsources[i]));
+                    scene.computeImageSourcesHelper(scene,p,scene.imsources[i],mvMatrix);
                 }
             }
         }
@@ -260,25 +275,78 @@ function addImageSourcesFunctions(scene) {
     //as an element "rcoeff" which stores the reflection coefficient at that
     //part of the path, which will be used to compute decays in "computeInpulseResponse()"
     //Don't forget the direct path from source to receiver!
-    scene.extractPathsHelper = function() {
+    scene.extractPathsHelper = function(startNode,endNode,subpath) {
+        var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
+        var V = vec3.create();
+        vec3.subtract(V,endNode.pos,startNode.pos);
+
+        //Break condition -- no bouncing necessary
+        if(startNode == scene.source){
+            console.log("source");
+            if(scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, endNode.genFace) == null){
+                subpath.push(scene.source);
+            }
+            scene.paths.push(subpath);
+            return;
+        }
+
+        var intersect = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, startNode.genFace);
+        //Intersect = null --> no other faces get in the way!
+        if(intersect == null){
+            //Consider keeping track of your faces mvMatrix so we don't have to iterate through the entire scene graph.
+            //Since the mvMatrixs build upon each other, you can't simply store the matrix of the face's object.
+            //Or just the chid node its coming from
+            //Calculate our bounce point
+            var bounce = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, null);
+            //Some points won't have a bounce pt because of weirdness in reflections
+            // There is a bounce point!
+            if(bounce != null){
+                var intermediateNode = {
+                  pos: bounce.PMin,
+                  order: startNode.order,
+                  rcoeff: startNode.rcoeff,
+                  parent: startNode.parent,
+                  genFace: bounce.faceMin
+                };
+                subpath.push(intermediateNode);
+                // Recurse back out
+                scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath);
+                return;
+            }
+            else{
+                console.log("No bounces");
+                return;
+            }
+        }
+        else{ //Random intersection
+            //scene.extractPathsHelper(startNode.parent,endNode,subpath)
+            console.log(intersect);
+            console.log("Random Intersection");
+        }
     }
     scene.extractPaths = function() {
         scene.paths = [];
-
+        //Identity Matrix
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
-        for(var q = 0; q < scene.imsources.length; q++){
-            var V = vec3.create();
-            var path = [scene.receiver];
-            vec3.subtract(V,scene.receiver.pos,scene.imsources[q].pos);
-            var ret = scene.rayIntersectFaces(scene.imsources[q].pos, V, scene, mvMatrix, scene.imsources[q].genFace);
-            if(ret == null){ // if null there are no intersections
-                path.push(scene.imsources[q]);
-                scene.paths.push(path);
-            }
 
+        //First check the direct path from the source
+        var V = vec3.create();
+        var path = [scene.receiver];
+        vec3.subtract(V,scene.receiver.pos,scene.source.pos);
+        var intersect = scene.rayIntersectFaces(scene.source.pos, V, scene, mvMatrix, null);
+
+        //If intersect = null there are no intersections
+        if(intersect == null){
+            path.push(scene.source);
+            scene.paths.push(path);
         }
-        var order = scene.imsources[scene.imsources.length-1].order;
+        // Recursively check bounces
+        for(var q = 1; q < scene.imsources.length; q++){
+            //console.log("imsource Q", q);
+            //console.log("node",scene.imsources[q]);
+            scene.extractPathsHelper(scene.imsources[q],scene.receiver,[scene.receiver]);
+        }
 
         //TODO: Finish this. Extract the rest of the paths by backtracing from
         //the image sources you calculated.  Return an array of arrays in
