@@ -115,10 +115,10 @@ function caluculateT(endNode, startNode, V){
     var endNodeT = vec3.create();
     vec3.subtract(endNodeT,endNode.pos,startNode.pos);
 
-    if(V[0] > 0){
+    if(V[0] != 0){
         var scalar = (1/V[0]);
         var t = endNodeT[0]*scalar;
-    } else if(V[1] > 0){
+    } else if(V[1] != 0){
         var scalar = (1/V[1]);
         var t = endNodeT[1]*scalar;
     } else{
@@ -269,8 +269,6 @@ function addImageSourcesFunctions(scene) {
         //See the "rayIntersectFaces" function above for an example of how to loop
         //through faces in a mesh
 
-        console.log(scene);
-
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         for(var p = 1; p <= order;p++){
@@ -280,7 +278,7 @@ function addImageSourcesFunctions(scene) {
                 }
             }
         }
-        console.log(scene.imsources.length);
+        console.log("# of sources:",scene.imsources.length);
     }
 
     //Purpose: Based on the extracted image sources, trace back paths from the
@@ -315,43 +313,37 @@ function addImageSourcesFunctions(scene) {
             return;
         }
         //Calculate t value from ray to endnode
+
         var tToEndNode = caluculateT(endNode,startNode,V);
         var tToBouncePt = rayIntersectPolygon(startNode.pos, V, startNode.genFace.getVerticesPos(), startNode.mvMatrix);
-        console.log("bouncept",tToBouncePt);
+
         //Check what for the first intersection from the ray going from startNode toward endnode
         var intersect = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, startNode.genFace);
-
         //Ensure that no other faces actually get in the way!
         //We want no intersections between the endpoint and the potential bounce point
-        if(intersect == null || (intersect.tmin >= tToEndNode && intersect.tmin >= 0)){
-            //Consider keeping track of your faces mvMatrix so we don't have to iterate through the entire scene graph.
-            //Since the mvMatrixs build upon each other, you can't simply store the matrix of the face's object.
-            //Or just the chid node its coming from
-            //Calculate our bounce point
-            var bounce = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, null);
-            //Some points won't have a bounce pt because of weirdness in reflections
-            // There is a bounce point!
+        if(intersect == null ||     //there are no intersections other than our generate face
+            (tToBouncePt != null && // We do in fact have a bounce point
+                !(tToBouncePt.t < intersect.tmin && intersect.tmin < tToEndNode) //the possible intersection point is not between our bounce pt and end point
+                && intersect.tmin >= 0 && tToBouncePt.t < tToEndNode)){ // t must be greater than 0, since its a ray
 
-            if(bounce != null && bounce.faceMin == startNode.genFace){
-                //ensure t value of bounce pt
+            if(tToBouncePt != null){ //We actually have something to bounce off of
+
+                var distance = vec3.distance(tmp.pos,tmp.parent.pos);
+                
                 var intermediateNode = {
-                  pos: bounce.PMin,
+                  pos: tToBouncePt.P,
                   order: startNode.order,
                   rcoeff: startNode.rcoeff,
                   parent: startNode.parent,
-                  genFace: bounce.faceMin,
+                  genFace: startNode.genFace,
                   mvMatrix: startNode.mvMatrix
                 };
-                console.log("pmin",bounce.PMin);
-                console.log("eNps",endNode.pos);
-                console.log("sNps",startNode.pos);
-                console.log("point in line",intermediateNode.pos);
                 subpath.push(intermediateNode);
                 // Recurse back out
                 return scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath);
             }
             else{
-                console.log("No bounces");
+                console.log("No bounces :(");
                 return;
             }
         }
@@ -405,5 +397,12 @@ function addImageSourcesFunctions(scene) {
         //those directions).  Use some form of interpolation to spread an impulse
         //which doesn't fall directly in a bin to nearby bins
         //Save the result into the array scene.impulseResp[]
+        for(var j = 0; j< scene.paths.length;j++){
+            var tmp = scene.paths[j][scene.paths[j].length-1];
+            var calc = 0;
+            while(tmp.parent != null){
+                var distance = vec3.distance(tmp.pos,tmp.parent.pos);
+            }
+        }
     }
 }

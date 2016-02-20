@@ -409,9 +409,14 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
         glcanvas.pathDrawer.reset();
         for (var i = 0; i < glcanvas.scene.paths.length; i++) {
             var path = glcanvas.scene.paths[i];
+            if(path.length == 2){var color = vec3.fromValues(1, 0, 0);}
+            else if(path.length == 3){var color = vec3.fromValues(1, 0, 1);}
+            else if(path.length == 5){var color = vec3.fromValues(0.5, 0.1, 0.9);}
+            else if(path.length == 6){var color = vec3.fromValues(0, 0.4, 0.5);}
+            else{var color = vec3.fromValues(0, 1, 0);}
             for (var j = 0; j < path.length-1; j++) {
                 //Draw all of the paths as a sequence of red line segments
-                glcanvas.pathDrawer.drawLine(path[j].pos, path[j+1].pos, vec3.fromValues(1, 0, 0));
+                glcanvas.pathDrawer.drawLine(path[j].pos, path[j+1].pos, color);
             }
         }
         requestAnimFrame(glcanvas.repaint);
