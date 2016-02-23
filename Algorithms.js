@@ -295,7 +295,7 @@ function addImageSourcesFunctions(scene) {
     //as an element "rcoeff" which stores the reflection coefficient at that
     //part of the path, which will be used to compute decays in "computeInpulseResponse()"
     //Don't forget the direct path from source to receiver!
-    scene.extractPathsHelper = function(startNode,endNode,subpath) {
+    scene.extractPathsHelper = function(startNode,endNode,subpath,impulse) {
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         var V = vec3.create();
@@ -321,15 +321,16 @@ function addImageSourcesFunctions(scene) {
         var intersect = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, startNode.genFace);
         //Ensure that no other faces actually get in the way!
         //We want no intersections between the endpoint and the potential bounce point
+
         if(intersect == null ||     //there are no intersections other than our generate face
             (tToBouncePt != null && // We do in fact have a bounce point
                 !(tToBouncePt.t < intersect.tmin && intersect.tmin < tToEndNode) //the possible intersection point is not between our bounce pt and end point
                 && intersect.tmin >= 0 && tToBouncePt.t < tToEndNode)){ // t must be greater than 0, since its a ray
 
             if(tToBouncePt != null){ //We actually have something to bounce off of
+                //var distance = vec3.distance(tToBouncePt.pos,endNode.pos);
+                //var impulse = 1/Math.pow((1-distance),startNode.rcoeff);
 
-                var distance = vec3.distance(tmp.pos,tmp.parent.pos);
-                
                 var intermediateNode = {
                   pos: tToBouncePt.P,
                   order: startNode.order,
@@ -340,15 +341,20 @@ function addImageSourcesFunctions(scene) {
                 };
                 subpath.push(intermediateNode);
                 // Recurse back out
-                return scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath);
+                if(tToBouncePt.P[1] < 3 && tToBouncePt.P[1] > 1 && tToBouncePt.P[0] < 5 && tToBouncePt.P[0] > 2){
+                    console.log("intersect",intersect);
+                    console.log("tToEndNode",tToEndNode);
+                    console.log("bpos",tToBouncePt.P);
+                }
+                return scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath,0);
             }
             else{
-                console.log("No bounces :(");
+                //console.log("No bounces :(");
                 return;
             }
         }
         else{ //Random intersection
-            console.log("Random Intersection");
+            //console.log("Random Intersection");
             return;
         }
         return;
@@ -365,13 +371,14 @@ function addImageSourcesFunctions(scene) {
         var intersect = scene.rayIntersectFaces(scene.source.pos, V, scene, mvMatrix, null);
 
         //If intersect = null there are no intersections
-        if(intersect == null){
+        console.log("intersect",intersect);
+        if(intersect == null || intersect.tmin > 1){
             path.push(scene.source);
             scene.paths.push(path);
         }
         // Recursively check bounces for other nodes
         for(var q = 1; q < scene.imsources.length; q++){
-            scene.extractPathsHelper(scene.imsources[q],scene.receiver,[scene.receiver]);
+            scene.extractPathsHelper(scene.imsources[q],scene.receiver,[scene.receiver],0);
         }
 
         //TODO: Finish this. Extract the rest of the paths by backtracing from
@@ -388,6 +395,7 @@ function addImageSourcesFunctions(scene) {
     //Inputs: Fs: Sampling rate (samples per second)
     scene.computeImpulseResponse = function(Fs) {
         var SVel = 340;//Sound travels at 340 meters/second
+        var Fs = 44100;
         //TODO: Finish this.  Be sure to scale each bounce by 1/(1+r^p),
         //where r is the length of the line segment of that bounce in meters
         //and p is some integer less than 1 (make it smaller if you want the
@@ -396,13 +404,48 @@ function addImageSourcesFunctions(scene) {
         //bounce (you should have stored this in extractPaths() if you followed
         //those directions).  Use some form of interpolation to spread an impulse
         //which doesn't fall directly in a bin to nearby bins
+        var p = 0.3;
+        var longestPath = 0;
+        var arr = [];
         //Save the result into the array scene.impulseResp[]
-        for(var j = 0; j< scene.paths.length;j++){
-            var tmp = scene.paths[j][scene.paths[j].length-1];
-            var calc = 0;
-            while(tmp.parent != null){
-                var distance = vec3.distance(tmp.pos,tmp.parent.pos);
+        //Impulse Response Start/end
+        for(var j = 0; j < scene.paths.length;j++){
+            if(scene.paths[j].length == 2){
+                var d = vec3.distance(scene.receiver.pos,scene.source.pos);
+                arr.push((d*(1/(1+Math.pow(d,p)))));
+            }
+            else{
+                var tmp = scene.paths[j][scene.paths[j].length-2];
+                var calc = 0;
+                var totalDist = 0;
+                //Calculate from 2nd last pt to receiver
+                var d = vec3.distance(tmp.pos,scene.receiver.pos);
+                calc += d / SVel;
+                totalDist += d;
+
+                //Calculate middle bounce pts
+                while(tmp != scene.source){
+                    console.log(tmp);
+                    var d = vec3.distance(tmp.pos,tmp.parent.pos);
+                    totalDist += d;
+                    console.log(d);
+                    d = tmp.rcoeff * (vec3.distance(tmp.pos,tmp.parent.pos) / SVel);
+                    console.log(d);
+                    calc += (d * (1/(1+Math.pow(d,p))));
+                    console.log(calc);
+                    tmp = tmp.parent;
+                }
+                if(d/SVel > longestPath){
+                    longestPath = d;
+                }
+                arr.push(calc);
             }
         }
+
+        scene.impulseResp = []; scene.impulseResp.length = Math.floor(longestPath*Fs);
+        for(var j = 0; j < arr.length;j++){
+            scene.impulseResp[Math.floor(arr[j])-1] += 1;
+        }
+        console.log("impulse",scene.impulseResp);
     }
 }
