@@ -1,0 +1,16 @@
+{
+    "name":"testscene",
+    "receiver":[5, 1.5, 0],
+    "source":[-5, 1.5, 0],
+    "children":[
+        {
+            "mesh":"meshes/square.off",
+            "color":[0.8, 0.8, 0.8],
+            "rcoeff":0.5,
+            "transform":[20, 0, 0, 0,
+                         0, 20, 0, 0,
+                         0, 0, 20, 0,
+                         0, 0, 0, 1]
+        }
+    ]
+}

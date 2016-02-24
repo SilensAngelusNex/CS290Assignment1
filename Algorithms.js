@@ -299,11 +299,11 @@ function addImageSourcesFunctions(scene) {
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         var V = vec3.create();
-        vec3.subtract(V,endNode.pos,startNode.pos);
+        vec3.subtract(V,startNode.pos,endNode.pos);
 
         //Break condition -- no bouncing necessary since it connects with the source
         if(startNode == scene.source){
-            var directIntersect = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, endNode.genFace);
+            var directIntersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, endNode.genFace);
             var t = caluculateT(endNode,startNode,V);
 
             if(directIntersect == null || directIntersect.tmin >= t){
@@ -315,10 +315,10 @@ function addImageSourcesFunctions(scene) {
         //Calculate t value from ray to endnode
 
         var tToEndNode = caluculateT(endNode,startNode,V);
-        var tToBouncePt = rayIntersectPolygon(startNode.pos, V, startNode.genFace.getVerticesPos(), startNode.mvMatrix);
+        var tToBouncePt = rayIntersectPolygon(endNode.pos, V, startNode.genFace.getVerticesPos(), startNode.mvMatrix);
 
         //Check what for the first intersection from the ray going from startNode toward endnode
-        var intersect = scene.rayIntersectFaces(startNode.pos, V, scene, mvMatrix, startNode.genFace);
+        var intersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, startNode.genFace);
         //Ensure that no other faces actually get in the way!
         //We want no intersections between the endpoint and the potential bounce point
 
@@ -431,7 +431,7 @@ function addImageSourcesFunctions(scene) {
                     console.log(d);
                     d = tmp.rcoeff * (vec3.distance(tmp.pos,tmp.parent.pos) / SVel);
                     console.log(d);
-                    calc += (d * (1/(1+Math.pow(d,p))));
+                    calc += (d * (1/(Math.pow(1+d,p))));
                     console.log(calc);
                     tmp = tmp.parent;
                 }
