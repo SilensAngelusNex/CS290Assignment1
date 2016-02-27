@@ -1,0 +1,17 @@
+{
+    "name":"Ellipsoid",
+    "receiver":[7.14, 0, 0],
+    "source":[-7.14, 0, 0],
+    "children":[
+        {
+            "mesh":"meshes/sphere.off",
+            "color":[1.0, 0.5, 0.0],
+            "rcoeff":0.5,
+            "transform":[10, 0, 0, 0,
+                         0, 7, 0, 0,
+                         0, 0, 7, 0,
+                         0, 0, 0, 1]
+        }
+
+    ]
+}

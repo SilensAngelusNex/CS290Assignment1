@@ -107,8 +107,8 @@
 <script>
     var glcanvas = document.getElementById("GLCanvas1");
     glcanvas.addEventListener("contextmenu", function(e){ e.stopPropagation(); e.preventDefault(); return false; }); //Need this to disable the menu that pops up on right clicking
-    var scene = loadSceneFromFile('SampleScene.scn', glcanvas);
-    
+    var scene = loadSceneFromFile('city.scn', glcanvas);
+
     var sceneInput = document.getElementById('sceneInput');
     sceneInput.addEventListener('change', function(e) {
         var reader = new FileReader();
@@ -125,14 +125,14 @@
         }
         reader.readAsText(sceneInput.files[0]);
     });
-    
+
     var meshEdgesCheckbox = document.getElementById('meshEdgesCheckbox');
     meshEdgesCheckbox.addEventListener('change', function(e) {
         glcanvas.drawEdges = meshEdgesCheckbox.checked;
         requestAnimFrame(glcanvas.repaint);
     });
     meshEdgesCheckbox.checked = true;
-    
+
     var displayImageSourcesCheckbox = document.getElementById('displayImageSourcesCheckbox');
     displayImageSourcesCheckbox.addEventListener('change', function(e) {
         glcanvas.drawImageSources = displayImageSourcesCheckbox.checked;
@@ -145,7 +145,7 @@
         requestAnimFrame(glcanvas.repaint);
     });
     displayPathsCheckbox.checked = true;
-    
+
     function callViewFromSource() {
         glcanvas.viewFromSource();
     }
@@ -178,15 +178,15 @@
     function playAudioSource() {
         playAudio(buffer);
     }
-    
+
     function playAudioImpulse() {
         playAudio(impbuffer);
     }
-    
+
     function playAudioConv() {
         playAudio(convbuffer);
     }
-    
+
     function playAudio(b) {
         if (context === null) {
             return;
@@ -202,7 +202,7 @@
         source.start();
         playing = true;
     }
-    
+
     function pauseAudio() {
         if (source === null) {
             return;
@@ -225,7 +225,7 @@
                     console.log(e);
                 });
             }
-        }        
+        }
         reader.readAsArrayBuffer(audioInput.files[0]);
     });
 
