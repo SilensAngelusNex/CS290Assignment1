@@ -136,8 +136,39 @@ function convertToWorldCoordinate(vertices,mvMatrix){
     }
     return rVertices;
 }
+//Returns the box that surrounds the given mesh object in world coordinates
+function boxMesh(mesh,mvMatrix){
+    var minX = Infinity;
+    var minY = Infinity;
+    var minZ = Infinity;
+    var maxX = NEGATIVE_INFINITY;
+    var maxY = NEGATIVE_INFINITY;
+    var maxZ = NEGATIVE_INFINITY;
 
+    for (var f = 0; f < mesh.faces.length; f++) {
+        var worldVertices = convertToWorldCoordinate(mesh.faces[f],mvMatrix);
+        for(var i = 0; i < vertices.length;i++){
+            if(worldVertices[i][0] > maxX){ maxX = worldVertices[i][0];}
+            if(worldVertices[i][1] > maxY){ maxY = worldVertices[i][1];}
+            if(worldVertices[i][2] > maxZ){ maxZ = worldVertices[i][2];}
+
+            if(worldVertices[i][0] < minX){ minX = worldVertices[i][0];}
+            if(worldVertices[i][1] < minY){ minY = worldVertices[i][1];}
+            if(worldVertices[i][2] < minZ){ minZ = worldVertices[i][2];}
+        }
+    }
+    return {minX:minX, minY:minY, minZ:minZ, maxX:maxX, maxY:maxY, maxZ:maxZ};
+}
 function addImageSourcesFunctions(scene) {
+    scene.preComputeBoxes = function(node,mvMatrix){
+        if(!("children" in node){
+            //compute bounding box for this node
+            var box = boxMesh(node.mesh,mvMatrix)
+        }
+        else{
+            scene.preComputeBoxes()
+        }
+    }
     //Setup all of the functions that students fill in that operate directly
     //on the scene
 

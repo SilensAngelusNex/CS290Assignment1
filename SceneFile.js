@@ -179,7 +179,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
     glcanvas.scene.receiver.pixWidth = pixWidth;
     glcanvas.scene.receiver.pixHeight = pixHeight;
     glcanvas.externalCam = new FPSCamera(pixWidth, pixHeight, 0.75);
-    glcanvas.externalCam.pos = vec3.fromValues(0, 1.5, 0);
+    glcanvas.externalCam.pos = vec3.fromValues(90, 51, 63);
     glcanvas.walkspeed = 2.5;//How many meters per second
     glcanvas.lastTime = (new Date()).getTime();
     glcanvas.movelr = 0;//Moving left/right
@@ -210,7 +210,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
 		glcanvas.gl.clear(glcanvas.gl.COLOR_BUFFER_BIT | glcanvas.gl.DEPTH_BUFFER_BIT);
 
 		var pMatrix = mat4.create();
-		mat4.perspective(pMatrix, 45, glcanvas.gl.viewportWidth / glcanvas.gl.viewportHeight, 0.01, 100.0);
+		mat4.perspective(pMatrix, 45, glcanvas.gl.viewportWidth / glcanvas.gl.viewportHeight, 0.01, 300.0);
 		//First get the global modelview matrix based on the camera
 		var mvMatrix = glcanvas.camera.getMVMatrix();
 		//Then drawn the scene
