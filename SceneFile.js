@@ -89,6 +89,7 @@ function setupScene(scene, glcanvas) {
     scene.imsources = [scene.source];
     scene.paths = [];
     scene.impulseResp = [];//Will hold the discrete impulse response
+    scene.impulses = [];
 
     //Add algorithm functions to this object
     addImageSourcesFunctions(scene);
@@ -179,7 +180,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
     glcanvas.scene.receiver.pixWidth = pixWidth;
     glcanvas.scene.receiver.pixHeight = pixHeight;
     glcanvas.externalCam = new FPSCamera(pixWidth, pixHeight, 0.75);
-    glcanvas.externalCam.pos = vec3.fromValues(90, 51, 63);
+    glcanvas.externalCam.pos = vec3.fromValues(0, 0, 0);
     glcanvas.walkspeed = 2.5;//How many meters per second
     glcanvas.lastTime = (new Date()).getTime();
     glcanvas.movelr = 0;//Moving left/right
