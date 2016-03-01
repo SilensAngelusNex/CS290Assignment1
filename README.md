@@ -28,7 +28,7 @@ Since, we already calculated the total length of paths and their respective impu
 For this section, we decided to create a new scene file called `hierarchicalRotations.scn` where we have an initial 2x2x2 box, which has a 2/3 size child above it rotated 60 degrees, which has its own child modified in the same way, and so on recursively.
 
 ## Reverberation Effect ##
-It proably would have been simpler to create two scene files with a single box.off mesh of different rcoeffs, but we chose to make a single scene file `reverb.scn` which itself has two separate, but connected rooms. In the first room, the walls all have an rcoeff = 1 having sounds that are much more echoy compared to the room with a low rcoeff <= 0.2.
+It probably would have been simpler to create two scene files with a single box.off mesh of different rcoeffs, but we chose to make a single scene file `reverb.scn` which itself has two separate, but connected rooms. In the first room, the walls all have an rcoeff = 1 having sounds that are much more echoy compared to the room with a low rcoeff <= 0.2.
 
 ## Near vs Far ##
 When the city scale is small sounds are loader compared to when the city is scaled higher. More sound is lost
@@ -62,3 +62,7 @@ When the paths are drawn with the source and the receiver set to the two foci of
 Despite there being a path from source to receiver off everyface of the ellipsoid when each is at the foci, if you move the source/receiver over by merely a couple meters there are only a few paths.
 
 ![Source and receiver at foci](./off_foci.png "Paths are pink")
+
+## Bounding Box ##
+
+Whenever a new scene file is created, our program creates a new tree containing bounded boxes and the meshes themselves by recursively iterating over the scene file and creating a new box for every element and combining boxes.

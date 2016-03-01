@@ -52,7 +52,7 @@
 <tr><td>Display Mesh Edges</td><td><input type="checkbox" id="meshEdgesCheckbox" /></td></tr>
 <tr><td>Display Image Sources</td><td><input type="checkbox" id="displayImageSourcesCheckbox" /></td></tr>
 <tr><td>Display Paths</td><td><input type="checkbox" id="displayPathsCheckbox" /></td></tr>
-<td><button type="button" id = "computeButton" onclick="callComputeBoxes()">Compute & Use Bounding Boxes</button></td>
+<tr><td>Use Bounding Boxes?</td><td><input type="checkbox" id="useBoundingBoxes" /></td></tr>
 <tr><td>Display Bounding Boxes</td><td><input type="checkbox" id="displayBoundingBoxes" /></td></tr>
 
 </table>
@@ -127,6 +127,10 @@
             setupScene(data, glcanvas);
         }
         reader.readAsText(sceneInput.files[0]);
+        
+        displayBoundingBoxes.checked = false;
+        useBoundingBoxes.checked = false;
+        meshEdgesCheckbox.checked = true;
     });
 
     var meshEdgesCheckbox = document.getElementById('meshEdgesCheckbox');
@@ -156,6 +160,15 @@
         requestAnimFrame(glcanvas.repaint);
     });
     displayBoundingBoxes.checked = false;
+
+    var useBoundingBoxes = document.getElementById('useBoundingBoxes');
+    useBoundingBoxes.addEventListener('change', function(e) {
+        glcanvas.scene.rayIntersectFacesType = useBoundingBoxes.checked;
+        if(glcanvas.scene.boxes == null){
+            callComputeBoxes()
+        }
+    });
+    useBoundingBoxes.checked = false;
 
     function callComputeBoxes(){
         glcanvas.computeBoxes();

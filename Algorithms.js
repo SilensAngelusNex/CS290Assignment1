@@ -260,7 +260,6 @@ function addImageSourcesFunctions(scene) {
     //NOTE: Calling this function with node = scene and an identity matrix for mvMatrix
     //will start the recursion at the top of the scene tree in world coordinates
     scene.fastRayIntersectFaces = function(P0, V, b, excludeFace) {
-
         var tmin = Infinity;//The parameter along the ray of the nearest intersection
         var PMin = null;    //The point of intersection corresponding to the nearest interesection
         var faceMin = null; //The face object corresponding to the nearest intersection
@@ -452,7 +451,7 @@ function addImageSourcesFunctions(scene) {
         //TODO: Fill the rest of this in.  Be sure to reflect images across faces
         //in world coordinates, not the faces in the original mesh coordinates
         //See the "rayIntersectFaces" function above for an example of how to loop
-        //through faces in a mesh
+            //through faces in a mesh
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         for(var p = 1; p <= order;p++){
