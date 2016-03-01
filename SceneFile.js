@@ -90,9 +90,14 @@ function setupScene(scene, glcanvas) {
     scene.paths = [];
     scene.impulseResp = [];//Will hold the discrete impulse response
     scene.impulses = [];
+    scene.boxes;
+    scene.rayIntersectFacesType = false;
 
     //Add algorithm functions to this object
     addImageSourcesFunctions(scene);
+    //Create boxes
+    /*console.log("scene",scene);
+    scene.boxes = scene.preComputeBoxes(scene,[1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);*/
 
     //Now that the scene has loaded, setup the glcanvas
     SceneCanvas(glcanvas, 'GLEAT/DrawingUtils', 800, 600, scene);
@@ -159,6 +164,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
     glcanvas.drawEdges = true;
     glcanvas.drawImageSources = true;
     glcanvas.drawPaths = true;
+    glcanvas.drawBoxes = true;
 
 	glcanvas.gl = null;
 	glcanvas.lastX = 0;
@@ -187,6 +193,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
     glcanvas.movefb = 0;//Moving forward/backward
     glcanvas.moveud = 0;//Moving up/down
     glcanvas.camera = glcanvas.externalCam;
+    glcanvas.rayIntersectFacesType = false; //false for normal, true for fast
 	//Meshes for source and receiver
     glcanvas.beaconMesh = getIcosahedronMesh();
     updateBeaconsPos();
@@ -204,7 +211,45 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
 		    }
 		}
 	}
+    glcanvas.repaintBoxes = function(b,color) {
+        if(glcanvas.drawBoxes == false || b == null || !("box" in b)){
+            return;
+        }
+        var thisBox = b.box;
+        var v1 = vec3.fromValues(thisBox.xMin, thisBox.yMin, thisBox.zMin);
+        var v2 = vec3.fromValues(thisBox.xMax, thisBox.yMin, thisBox.zMin);
+        var v3 = vec3.fromValues(thisBox.xMin, thisBox.yMin, thisBox.zMax);
+        var v4 = vec3.fromValues(thisBox.xMax, thisBox.yMin, thisBox.zMax);
 
+        //Top Face
+        var v5 = vec3.fromValues(thisBox.xMin, thisBox.yMax, thisBox.zMin);
+        var v6 = vec3.fromValues(thisBox.xMax, thisBox.yMax, thisBox.zMin);
+        var v7 = vec3.fromValues(thisBox.xMin, thisBox.yMax, thisBox.zMax);
+        var v8 = vec3.fromValues(thisBox.xMax, thisBox.yMax, thisBox.zMax);
+
+        //Bottom
+        glcanvas.pathDrawer.drawLine(v1, v2, color);
+        glcanvas.pathDrawer.drawLine(v2, v4, color);
+        glcanvas.pathDrawer.drawLine(v3, v4, color);
+        glcanvas.pathDrawer.drawLine(v1, v3, color);
+        //Middle
+        glcanvas.pathDrawer.drawLine(v1, v5, color);
+        glcanvas.pathDrawer.drawLine(v2, v6, color);
+        glcanvas.pathDrawer.drawLine(v3, v7, color);
+        glcanvas.pathDrawer.drawLine(v4, v8, color);
+        //Top
+        glcanvas.pathDrawer.drawLine(v5, v6, color);
+        glcanvas.pathDrawer.drawLine(v6, v8, color);
+        glcanvas.pathDrawer.drawLine(v7, v8, color);
+        glcanvas.pathDrawer.drawLine(v5, v7, color);
+
+
+        for(var i = 0; i < b.childrenBoxes.length; i++){
+            var c = vec3.fromValues(Math.random(), Math.random(), Math.random());
+            glcanvas.repaintBoxes(b.childrenBoxes[i],c);
+        }
+        return;
+    }
 	glcanvas.repaint = function() {
 	    glcanvas.light1Pos = glcanvas.camera.pos;
 		glcanvas.gl.viewport(0, 0, glcanvas.gl.viewportWidth, glcanvas.gl.viewportHeight);
@@ -260,6 +305,9 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
 		glcanvas.drawer.reset(); //Clear lines and points drawn last time
 		//TODO: Paint debugging stuff here if you'd like
 		glcanvas.drawer.repaint(pMatrix, mvMatrix);
+
+        var boxes = glcanvas.scene.boxes;
+        glcanvas.repaintBoxes(boxes,vec3.fromValues(1,1,1));
 
 		//Redraw if walking
 		if (glcanvas.movelr != 0 || glcanvas.moveud != 0 || glcanvas.movefb != 0) {
@@ -382,6 +430,11 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
 	/////////////////////////////////////////////////////
 	//Step 3: Initialize GUI Callbacks
 	/////////////////////////////////////////////////////
+    glcanvas.computeBoxes = function() {
+        scene.boxes = scene.preComputeBoxes(scene,[1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+        scene.rayIntersectFacesType = true; // We like it fast!
+        requestAnimFrame(glcanvas.repaint);
+    }
     glcanvas.viewFromSource = function() {
         glcanvas.camera = glcanvas.scene.source;
         requestAnimFrame(glcanvas.repaint);
@@ -410,6 +463,7 @@ function SceneCanvas(glcanvas, shadersRelPath, pixWidth, pixHeight, scene) {
         glcanvas.pathDrawer.reset();
         for (var i = 0; i < glcanvas.scene.paths.length; i++) {
             var path = glcanvas.scene.paths[i];
+            //Add color based on number of bounces
             if(path.length == 2){var color = vec3.fromValues(1, 0, 0);}
             else if(path.length == 3){var color = vec3.fromValues(1, 0, 1);}
             else if(path.length == 5){var color = vec3.fromValues(0.5, 0.1, 0.9);}
