@@ -52,6 +52,9 @@
 <tr><td>Display Mesh Edges</td><td><input type="checkbox" id="meshEdgesCheckbox" /></td></tr>
 <tr><td>Display Image Sources</td><td><input type="checkbox" id="displayImageSourcesCheckbox" /></td></tr>
 <tr><td>Display Paths</td><td><input type="checkbox" id="displayPathsCheckbox" /></td></tr>
+<tr><td>Use Bounding Boxes?</td><td><input type="checkbox" id="useBoundingBoxes" /></td></tr>
+<tr><td>Display Bounding Boxes</td><td><input type="checkbox" id="displayBoundingBoxes" /></td></tr>
+
 </table>
 
 <h3>Viewpoint</h3>
@@ -107,7 +110,7 @@
 <script>
     var glcanvas = document.getElementById("GLCanvas1");
     glcanvas.addEventListener("contextmenu", function(e){ e.stopPropagation(); e.preventDefault(); return false; }); //Need this to disable the menu that pops up on right clicking
-    var scene = loadSceneFromFile('city.scn', glcanvas);
+    var scene = loadSceneFromFile('box.scn', glcanvas);
 
     var sceneInput = document.getElementById('sceneInput');
     sceneInput.addEventListener('change', function(e) {
@@ -124,6 +127,10 @@
             setupScene(data, glcanvas);
         }
         reader.readAsText(sceneInput.files[0]);
+        
+        displayBoundingBoxes.checked = false;
+        useBoundingBoxes.checked = false;
+        meshEdgesCheckbox.checked = true;
     });
 
     var meshEdgesCheckbox = document.getElementById('meshEdgesCheckbox');
@@ -139,6 +146,7 @@
         requestAnimFrame(glcanvas.repaint);
     });
     displayImageSourcesCheckbox.checked = true;
+
     var displayPathsCheckbox = document.getElementById('displayPathsCheckbox');
     displayPathsCheckbox.addEventListener('change', function(e) {
         glcanvas.drawPaths = displayPathsCheckbox.checked;
@@ -146,6 +154,25 @@
     });
     displayPathsCheckbox.checked = true;
 
+    var displayBoundingBoxes = document.getElementById('displayBoundingBoxes');
+    displayBoundingBoxes.addEventListener('change', function(e) {
+        glcanvas.drawPaths = displayBoundingBoxes.checked;
+        requestAnimFrame(glcanvas.repaint);
+    });
+    displayBoundingBoxes.checked = false;
+
+    var useBoundingBoxes = document.getElementById('useBoundingBoxes');
+    useBoundingBoxes.addEventListener('change', function(e) {
+        glcanvas.scene.rayIntersectFacesType = useBoundingBoxes.checked;
+        if(glcanvas.scene.boxes == null){
+            callComputeBoxes()
+        }
+    });
+    useBoundingBoxes.checked = false;
+
+    function callComputeBoxes(){
+        glcanvas.computeBoxes();
+    }
     function callViewFromSource() {
         glcanvas.viewFromSource();
     }

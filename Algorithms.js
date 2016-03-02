@@ -107,25 +107,13 @@ function rayIntersectPolygon(P0, V, vertices, mvMatrix) {
     //Step 5: Return the intersection point if it exists or null if it's outside
     //of the polygon or if the ray is perpendicular to the plane normal (no intersection)
 
-    return {t:tIntersect, P:P}; //These are dummy values, but you should return
-    //both an intersection point and a parameter t.  The parameter t will be used to sort
-    //intersections in order of occurrence to figure out which one happened first
+    return {t:tIntersect, P:P};
 }
-function caluculateT(endNode, startNode, V){
-    var endNodeT = vec3.create();
-    vec3.subtract(endNodeT,endNode.pos,startNode.pos);
-
-    if(V[0] != 0){
-        var scalar = (1/V[0]);
-        var t = endNodeT[0]*scalar;
-    } else if(V[1] != 0){
-        var scalar = (1/V[1]);
-        var t = endNodeT[1]*scalar;
-    } else{
-        var scalar = (1/V[2]);
-        var t = endNodeT[2]*scalar;
+function inBox(box,pos){
+    if(box.xMin >= pos[0] && box.xMax < pos[0] && box.yMin >= pos[1] && box.yMax < pos[1] && box.zMin >= pos[2] && box.zMax < pos[2]){
+        return true;
     }
-    return t;
+    return false;
 }
 function convertToWorldCoordinate(vertices,mvMatrix){
     var rVertices = [];
@@ -136,38 +124,125 @@ function convertToWorldCoordinate(vertices,mvMatrix){
     }
     return rVertices;
 }
+var clicked = false;
+var sec = 0;
+
+/// TIMING UTILITY FUNCTIONS ///
+var start = 0, end = 0, minutes = 0;
+function startClock() {
+    start = new Date().getTime();
+}
+
+function stopClock(bool) {
+    end = new Date().getTime();
+    var time = end - start;
+    if(bool){
+        console.log('Execution time w/Bounding Boxes: ' + time);
+    } else{
+        console.log('Execution time w/o Bounding Boxes: ' + time);
+    }
+}
+
+
 //Returns the box that surrounds the given mesh object in world coordinates
 function boxMesh(mesh,mvMatrix){
-    var minX = Infinity;
-    var minY = Infinity;
-    var minZ = Infinity;
-    var maxX = NEGATIVE_INFINITY;
-    var maxY = NEGATIVE_INFINITY;
-    var maxZ = NEGATIVE_INFINITY;
+    var xMin = Infinity;
+    var yMin = Infinity;
+    var zMin = Infinity;
+    var xMax = Number.NEGATIVE_INFINITY;
+    var yMax = Number.NEGATIVE_INFINITY;
+    var zMax = Number.NEGATIVE_INFINITY;
+    for (var q = 0; q < mesh.faces.length; q++) {
 
-    for (var f = 0; f < mesh.faces.length; f++) {
-        var worldVertices = convertToWorldCoordinate(mesh.faces[f],mvMatrix);
-        for(var i = 0; i < vertices.length;i++){
-            if(worldVertices[i][0] > maxX){ maxX = worldVertices[i][0];}
-            if(worldVertices[i][1] > maxY){ maxY = worldVertices[i][1];}
-            if(worldVertices[i][2] > maxZ){ maxZ = worldVertices[i][2];}
+        var worldVertices = convertToWorldCoordinate(mesh.faces[q].getVerticesPos(),mvMatrix);
+        for(var l = 0; l < worldVertices.length;l++){
+            if(worldVertices[l][0] > xMax){ xMax = worldVertices[l][0];}
+            if(worldVertices[l][1] > yMax){ yMax = worldVertices[l][1];}
+            if(worldVertices[l][2] > zMax){ zMax = worldVertices[l][2];}
 
-            if(worldVertices[i][0] < minX){ minX = worldVertices[i][0];}
-            if(worldVertices[i][1] < minY){ minY = worldVertices[i][1];}
-            if(worldVertices[i][2] < minZ){ minZ = worldVertices[i][2];}
+            if(worldVertices[l][0] < xMin){ xMin = worldVertices[l][0];}
+            if(worldVertices[l][1] < yMin){ yMin = worldVertices[l][1];}
+            if(worldVertices[l][2] < zMin){ zMin = worldVertices[l][2];}
         }
     }
-    return {minX:minX, minY:minY, minZ:minZ, maxX:maxX, maxY:maxY, maxZ:maxZ};
+    return {xMin:xMin, yMin:yMin, zMin:zMin, xMax:xMax, yMax:yMax, zMax:zMax};
 }
+function mergeBoxes(box1,box2){
+    var xMin = 0;
+    var yMin = 0;
+    var zMin = 0;
+    var xMax = 0;
+    var yMax = 0;
+    var zMax = 0;
+
+    if(box1.xMax > box2.xMax){ xMax = box1.xMax;} else {xMax = box2.xMax;}
+    if(box1.yMax > box2.yMax){ yMax = box1.yMax;} else {yMax = box2.yMax;}
+    if(box1.zMax > box2.zMax){ zMax = box1.zMax;} else {zMax = box2.zMax;}
+
+    if(box1.xMin < box2.xMin){ xMin = box1.xMin;} else {xMin = box2.xMin;}
+    if(box1.yMin < box2.yMin){ yMin = box1.yMin;} else {yMin = box2.yMin;}
+    if(box1.zMin < box2.zMin){ zMin = box1.zMin;} else {zMin = box2.zMin;}
+    return {xMin:xMin, yMin:yMin, zMin:zMin, xMax:xMax, yMax:yMax, zMax:zMax};
+}
+
+/// Global Variables ///
+var p = 0;
 function addImageSourcesFunctions(scene) {
+
     scene.preComputeBoxes = function(node,mvMatrix){
-        if(!("children" in node){
-            //compute bounding box for this node
-            var box = boxMesh(node.mesh,mvMatrix)
+        var returnBox = null;
+        if(!("children" in node)){
+
+            var box = boxMesh(node.mesh,mvMatrix);
+            //Add dummy node as box and child is the node
+            returnBox = {
+              childrenNodes: [node],
+              childrenBoxes: [],
+              mvMatrix: mvMatrix,
+              box: box,
+            };
+            return returnBox;
         }
         else{
-            scene.preComputeBoxes()
+            var returnBox = {
+              childrenNodes: [],
+              mvMatrix: mvMatrix,
+              childrenBoxes: [],
+              box: {
+                  xMax:Number.NEGATIVE_INFINITY,
+                  xMin:Infinity,
+                  yMax:Number.NEGATIVE_INFINITY,
+                  yMin:Infinity,
+                  zMax:Number.NEGATIVE_INFINITY,
+                  zMin:Infinity,
+              },
+            };
+            if("mesh" in node){
+                var itemBox = {
+                    childrenNodes: [node],
+                    childrenBoxes: [],
+                    mvMatrix: mvMatrix,
+                    box: boxMesh(node.mesh,mvMatrix),
+                };
+                returnBox.box = boxMesh(node.mesh,mvMatrix),
+                returnBox.childrenBoxes.push(itemBox);
+            }
+            //Compute subboxes and merge with master box
+            for(var g = 0; g < node.children.length;g++){
+
+                //Find new mvMatrix
+                var nextmvMatrix = mat4.create();
+                mat4.mul(nextmvMatrix, mvMatrix, node.children[g].transform);
+
+                //Find next childBox
+                var childBox = scene.preComputeBoxes(node.children[g],nextmvMatrix);
+
+                //Update current box
+                returnBox.box = mergeBoxes(returnBox.box,childBox.box);
+                returnBox.childrenBoxes.push(childBox);
+            }
         }
+        return returnBox;
     }
     //Setup all of the functions that students fill in that operate directly
     //on the scene
@@ -184,6 +259,84 @@ function addImageSourcesFunctions(scene) {
 
     //NOTE: Calling this function with node = scene and an identity matrix for mvMatrix
     //will start the recursion at the top of the scene tree in world coordinates
+    scene.fastRayIntersectFaces = function(P0, V, b, excludeFace) {
+        var tmin = Infinity;//The parameter along the ray of the nearest intersection
+        var PMin = null;    //The point of intersection corresponding to the nearest interesection
+        var faceMin = null; //The face object corresponding to the nearest intersection
+
+        if (b === null) {
+            return null;
+        }
+        var thisBox = b.box;
+        //Bottom Face
+        var v1 = vec3.fromValues(thisBox.xMin, thisBox.yMin, thisBox.zMin);
+        var v2 = vec3.fromValues(thisBox.xMax, thisBox.yMin, thisBox.zMin);
+        var v3 = vec3.fromValues(thisBox.xMin, thisBox.yMin, thisBox.zMax);
+        var v4 = vec3.fromValues(thisBox.xMax, thisBox.yMin, thisBox.zMax);
+
+        //Top Face
+        var v5 = vec3.fromValues(thisBox.xMin, thisBox.yMax, thisBox.zMin);
+        var v6 = vec3.fromValues(thisBox.xMax, thisBox.yMax, thisBox.zMin);
+        var v7 = vec3.fromValues(thisBox.xMin, thisBox.yMax, thisBox.zMax);
+        var v8 = vec3.fromValues(thisBox.xMax, thisBox.yMax, thisBox.zMax);
+
+        var bot = rayIntersectPolygon(P0, V, [v1, v2, v3, v4], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+        var top = rayIntersectPolygon(P0, V, [v5, v6, v7, v8], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+
+        var right = rayIntersectPolygon(P0, V, [v1, v3, v5, v7], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+        var left = rayIntersectPolygon(P0, V, [v2, v4, v6, v8], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+
+        var front = rayIntersectPolygon(P0, V, [v1, v2, v5, v6], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+        var back = rayIntersectPolygon(P0, V, [v3, v4, v7, v8], [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1]);
+
+        var intersectBox = ((bot == null) || (top == null) || (right == null) || (left == null) || (front == null) || (back == null));
+
+        //Check if ray intersect biggest box.
+        if(intersectBox){
+            //If b has other boxes in it...
+            if(b.childrenBoxes.length > 0){
+                for (var j = 0; j < b.childrenBoxes.length; j++){
+                    //...check them recursively.
+                    var cres = scene.fastRayIntersectFaces(P0, V, b.childrenBoxes[j], excludeFace);
+
+                    if (!(cres === null) && (cres.tmin < tmin)) {
+                        tmin = cres.tmin;
+                        PMin = cres.PMin;
+                        faceMin = cres.faceMin;
+                    }
+                }
+            }
+            //If b has nodes in it...
+            if(b.childrenNodes.length > 0){
+                for (var t = 0; t < b.childrenNodes.length; t++){
+                    //...and they have meshes in them...
+                    if('mesh' in b.childrenNodes[t]){
+                        var mesh = b.childrenNodes[t].mesh;
+                        //...check if the ray intersects any of the mesh's faces.
+                        for (var f = 0; f < mesh.faces.length; f++) {
+                            //Don't count excludeFace
+                            if (mesh.faces[f] == excludeFace) {
+                                continue;
+                            }
+                            var res = rayIntersectPolygon(P0, V, mesh.faces[f].getVerticesPos(), b.mvMatrix);
+                            if (!(res === null) && (res.t < tmin)) {
+                                tmin = res.t;
+                                PMin = res.P;
+                                faceMin = mesh.faces[f];
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+        if (PMin === null) {
+            return null;
+        }
+
+        return {tmin:tmin, PMin:PMin, faceMin:faceMin};
+    }
+
     scene.rayIntersectFaces = function(P0, V, node, mvMatrix, excludeFace) {
         var tmin = Infinity;//The parameter along the ray of the nearest intersection
         var PMin = null;    //The point of intersection corresponding to the nearest interesection
@@ -254,7 +407,7 @@ function addImageSourcesFunctions(scene) {
                     scene.imsources.push({
                       pos: reflect_pt,
                       order: order,
-                      rcoeff: obj.rcoeff,
+                      rcoeff: node.rcoeff,
                       parent: obj,
                       genFace: node.mesh.faces[m],
                       mvMatrix: mvMatrix
@@ -298,12 +451,11 @@ function addImageSourcesFunctions(scene) {
         //TODO: Fill the rest of this in.  Be sure to reflect images across faces
         //in world coordinates, not the faces in the original mesh coordinates
         //See the "rayIntersectFaces" function above for an example of how to loop
-        //through faces in a mesh
-
+            //through faces in a mesh
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         for(var p = 1; p <= order;p++){
-            for(var i = 0; i < scene.imsources.length; i++) {
+            for(var i = scene.imsources.length-1; i >= 0; i--) {
                 if(scene.imsources[i].order == p-1){
                     scene.computeImageSourcesHelper(scene,p,scene.imsources[i],mvMatrix);
                 }
@@ -326,41 +478,46 @@ function addImageSourcesFunctions(scene) {
     //as an element "rcoeff" which stores the reflection coefficient at that
     //part of the path, which will be used to compute decays in "computeInpulseResponse()"
     //Don't forget the direct path from source to receiver!
-    scene.extractPathsHelper = function(startNode,endNode,subpath,impulse) {
+    scene.extractPathsHelper = function(startNode,endNode,subpath,impulse,totalDist) {
+        //Identity Matrix
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
 
         var V = vec3.create();
         vec3.subtract(V,startNode.pos,endNode.pos);
-
         //Break condition -- no bouncing necessary since it connects with the source
         if(startNode == scene.source){
-            var directIntersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, endNode.genFace);
-            var t = caluculateT(endNode,startNode,V);
+            if(scene.rayIntersectFacesType){
+                var directIntersect = scene.fastRayIntersectFaces(endNode.pos, V, scene.boxes, endNode.genFace);
+            }
+            else{
+                var directIntersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, endNode.genFace);
+            }
+            //var t = caluculateT(endNode,startNode,V);
 
-            if(directIntersect == null || directIntersect.tmin >= t){
+            // Check if there is a direct intersection between startNode and endNode excluding the generation face of the endNode
+            if(directIntersect == null || directIntersect.tmin >= 1){
+                //Add subpath
                 subpath.push(scene.source);
                 scene.paths.push(subpath);
+
+                //Add impulse material
+                var d = vec3.distance(scene.source.pos,endNode.pos);
+                imp = impulse *  (1/(1+Math.pow(d,p)));
+                scene.impulses.push([imp,d+totalDist]);
             }
             return;
         }
-        //Calculate t value from ray to endnode
-
-        var tToEndNode = caluculateT(endNode,startNode,V);
+        //Calculate t from endNode to startNode generation face
         var tToBouncePt = rayIntersectPolygon(endNode.pos, V, startNode.genFace.getVerticesPos(), startNode.mvMatrix);
+        //Calculate minimum t from endNode to startNode
+        if(scene.rayIntersectFacesType){
+            var intersect = scene.fastRayIntersectFaces(endNode.pos, V, scene.boxes, startNode.genFace);
+        } else{
+            var intersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, startNode.genFace);
+        }
 
-        //Check what for the first intersection from the ray going from startNode toward endnode
-        var intersect = scene.rayIntersectFaces(endNode.pos, V, scene, mvMatrix, startNode.genFace);
-        //Ensure that no other faces actually get in the way!
-        //We want no intersections between the endpoint and the potential bounce point
 
-        if(intersect == null ||     //there are no intersections other than our generate face
-            (tToBouncePt != null && // We do in fact have a bounce point
-                !(tToBouncePt.t < intersect.tmin && intersect.tmin < tToEndNode) //the possible intersection point is not between our bounce pt and end point
-                && intersect.tmin >= 0 && tToBouncePt.t < tToEndNode)){ // t must be greater than 0, since its a ray
-
-            if(tToBouncePt != null){ //We actually have something to bounce off of
-                //var distance = vec3.distance(tToBouncePt.pos,endNode.pos);
-                //var impulse = 1/Math.pow((1-distance),startNode.rcoeff);
+        if((tToBouncePt != null && tToBouncePt.t > 0 && tToBouncePt.t <= 1) && (intersect == null || intersect.tmin > tToBouncePt.t)){ // t must be greater than 0, since its a ray
 
                 var intermediateNode = {
                   pos: tToBouncePt.P,
@@ -371,26 +528,17 @@ function addImageSourcesFunctions(scene) {
                   mvMatrix: startNode.mvMatrix
                 };
                 subpath.push(intermediateNode);
-                // Recurse back out
-                if(tToBouncePt.P[1] < 3 && tToBouncePt.P[1] > 1 && tToBouncePt.P[0] < 5 && tToBouncePt.P[0] > 2){
-                    console.log("intersect",intersect);
-                    console.log("tToEndNode",tToEndNode);
-                    console.log("bpos",tToBouncePt.P);
-                }
-                return scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath,0);
-            }
-            else{
-                //console.log("No bounces :(");
-                return;
-            }
+
+                var d = vec3.distance(startNode.pos,endNode.pos);
+                var imp = impulse *  1/(1+Math.pow(d,p)) * startNode.rcoeff;
+
+                return scene.extractPathsHelper(intermediateNode.parent,intermediateNode,subpath,imp,totalDist+d);
         }
-        else{ //Random intersection
-            //console.log("Random Intersection");
-            return;
-        }
+        else{ return; }
         return;
     }
     scene.extractPaths = function() {
+        startClock();
         scene.paths = [];
         //Identity Matrix
         var mvMatrix = [1,0,0,0 ,0,1,0,0 ,0,0,1,0 ,0,0,0,1];
@@ -398,19 +546,28 @@ function addImageSourcesFunctions(scene) {
         //First check the direct path from the source
         var V = vec3.create();
         var path = [scene.receiver];
-        vec3.subtract(V,scene.receiver.pos,scene.source.pos);
-        var intersect = scene.rayIntersectFaces(scene.source.pos, V, scene, mvMatrix, null);
 
+        vec3.subtract(V,scene.receiver.pos,scene.source.pos);
+
+        if(scene.rayIntersectFacesType){
+            var intersect = scene.fastRayIntersectFaces(scene.source.pos, V, scene.boxes, null);
+        } else{
+            var intersect = scene.rayIntersectFaces(scene.source.pos, V, scene, mvMatrix, null);
+        }
         //If intersect = null there are no intersections
-        console.log("intersect",intersect);
         if(intersect == null || intersect.tmin > 1){
             path.push(scene.source);
             scene.paths.push(path);
+
+            var d = vec3.distance(scene.receiver.pos,scene.source.pos);
+            var imp = 1/(1+Math.pow(d,p));
+            scene.impulses.push([imp,d]);
         }
         // Recursively check bounces for other nodes
         for(var q = 1; q < scene.imsources.length; q++){
-            scene.extractPathsHelper(scene.imsources[q],scene.receiver,[scene.receiver],0);
+            scene.extractPathsHelper(scene.imsources[q],scene.receiver,[scene.receiver],1,0);
         }
+        stopClock(scene.rayIntersectFacesType);
 
         //TODO: Finish this. Extract the rest of the paths by backtracing from
         //the image sources you calculated.  Return an array of arrays in
@@ -419,7 +576,6 @@ function addImageSourcesFunctions(scene) {
         //(or vice versa), so scene.receiver should be the first element
         //and scene.source should be the last element of every array in
         //scene.paths
-        console.log("paths size",scene.paths.length);
     }
 
 
@@ -435,48 +591,17 @@ function addImageSourcesFunctions(scene) {
         //bounce (you should have stored this in extractPaths() if you followed
         //those directions).  Use some form of interpolation to spread an impulse
         //which doesn't fall directly in a bin to nearby bins
-        var p = 0.3;
-        var longestPath = 0;
-        var arr = [];
-        //Save the result into the array scene.impulseResp[]
+        scene.impulsesResp = [];
+        //Save the result into the array
         //Impulse Response Start/end
-        for(var j = 0; j < scene.paths.length;j++){
-            if(scene.paths[j].length == 2){
-                var d = vec3.distance(scene.receiver.pos,scene.source.pos);
-                arr.push((d*(1/(1+Math.pow(d,p)))));
+        for(var j = 0; j < scene.impulses.length;j++){
+            //Direct Path
+            //convert to time
+            var sampleNum = Math.floor(Fs * scene.impulses[j][1] / SVel);
+            while(sampleNum >= scene.impulseResp.length){
+                scene.impulseResp.push(0);
             }
-            else{
-                var tmp = scene.paths[j][scene.paths[j].length-2];
-                var calc = 0;
-                var totalDist = 0;
-                //Calculate from 2nd last pt to receiver
-                var d = vec3.distance(tmp.pos,scene.receiver.pos);
-                calc += d / SVel;
-                totalDist += d;
-
-                //Calculate middle bounce pts
-                while(tmp != scene.source){
-                    console.log(tmp);
-                    var d = vec3.distance(tmp.pos,tmp.parent.pos);
-                    totalDist += d;
-                    console.log(d);
-                    d = tmp.rcoeff * (vec3.distance(tmp.pos,tmp.parent.pos) / SVel);
-                    console.log(d);
-                    calc += (d * (1/(Math.pow(1+d,p))));
-                    console.log(calc);
-                    tmp = tmp.parent;
-                }
-                if(d/SVel > longestPath){
-                    longestPath = d;
-                }
-                arr.push(calc);
-            }
+            scene.impulseResp[sampleNum] += scene.impulses[j][0];
         }
-
-        scene.impulseResp = []; scene.impulseResp.length = Math.floor(longestPath*Fs);
-        for(var j = 0; j < arr.length;j++){
-            scene.impulseResp[Math.floor(arr[j])-1] += 1;
-        }
-        console.log("impulse",scene.impulseResp);
     }
 }

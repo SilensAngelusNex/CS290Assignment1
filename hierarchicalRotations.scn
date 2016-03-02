@@ -1,153 +1,49 @@
 {
-    "name":"testscene",
-    "receiver":[4, 13.5, 7],
-    "source":[-5, 6, 0],
+    "name":"Tower of Hanoi",
+    "receiver":[3, 8, -2],
+    "source":[-3.2, 6, 4],
     "children":[
         {
-            "mesh":"meshes/square.off",
-            "color":[1.0, 0.5, 0.0],
-            "rcoeff":0.5,
-            "transform":[20, 0, 0, 0,
-                         0, 20, 0, 0,
-                         0, 0, 20, 0,
+            "mesh":"meshes/box.off",
+            "color":[0.8, 0, 0.8],
+            "rcoeff":1,
+            "transform":[2, 0, 0, 0,
+                         0, 2, 0, 0,
+                         0, 0, 2, 0,
                          0, 0, 0, 1],
-            "children":[
-                {
-                    "mesh":"meshes/box.off",
-                    "color":[1.0, 0.5, 0.0],
-                    "rcoeff":0.5,
-                    "transform":[0.2, 0, 0, -0.5,
-                                 0, 1, 0, 0.2,
-                                 0, 0, 0.2, 0.5,
-                                 0, 0, 0, 1],
-                     "children":[
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[1, 0, 0, 0,
-                                          0, 0.1, 0, 0.2,
-                                          0, 0, 5, -2,
-                                          0, 0, 0, 1]
-                         },
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[1, 0, 0, 0,
-                                          0, 0.1, 0, 0.5,
-                                          0, 0, 5, -2,
-                                          0, 0, 0, 1]
-                         }
-                        ]
-                },
-                {
-                    "mesh":"geometry/tetrahedron.off",
-                    "color":[1.0, 0.5, 0.0],
-                    "rcoeff":0.5,
-                    "transform":[0.1, 0, 0, 0,
-                                 0, 0.1, 0, 0,
-                                 0, 0, 0.1, 0,
-                                 0, 0, 0, 1]
-                },
-                {
-                    "mesh":"meshes/box.off",
-                    "color":[1.0, 0.5, 0.0],
-                    "rcoeff":0.5,
-                    "transform":[0.2, 0, 0, 0.5,
-                                 0, 1, 0, 0.2,
-                                 0, 0, 0.2, 0.5,
-                                 0, 0, 0, 1],
-                     "children":[
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[5, 0, 0, -2,
-                                          0, 0.1, 0, 0.2,
-                                          0, 0, 1, 0,
-                                          0, 0, 0, 1]
-                         },
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[5, 0, 0, -2,
-                                          0, 0.1, 0, 0.5,
-                                          0, 0, 1, 0,
-                                          0, 0, 0, 1]
-                         }
-                        ]
-                },
-                {
-                    "mesh":"meshes/box.off",
-                    "color":[1.0, 0.5, 0.0],
-                    "rcoeff":0.5,
-                    "transform":[0.2, 0, 0, -0.5,
-                                 0, 1, 0, 0.2,
-                                 0, 0, 0.2, -0.5,
-                                 0, 0, 0, 1],
-                     "children":[
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[5, 0, 0, 2.5,
-                                          0, 0.1, 0, 0.2,
-                                          0, 0, 1, 0,
-                                          0, 0, 0, 1]
-                         },
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[5, 0, 0, 2.5,
-                                          0, 0.1, 0, 0.5,
-                                          0, 0, 1, 0,
-                                          0, 0, 0, 1]
-                         }
-                        ]
-                },
-                {
-                    "mesh":"meshes/box.off",
-                    "color":[1.0, 0.5, 0.0],
-                    "rcoeff":0.5,
-                    "transform":[0.2, 0, 0, 0.5,
-                                 0, 1, 0, 0.2,
-                                 0, 0, 0.2, -0.5,
-                                 0, 0, 0, 1],
-                     "children":[
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[1, 0, 0, 0,
-                                          0, 0.1, 0, 0.2,
-                                          0, 0, 5, 2.5,
-                                          0, 0, 0, 1]
-                         },
-                         {
-                             "mesh":"meshes/box.off",
-                             "color":[1.0, 0.5, 0.0],
-                             "rcoeff":0.5,
-                             "transform":[1, 0, 0, 0,
-                                          0, 0.1, 0, 0.5,
-                                          0, 0, 5, 2.5,
-                                          0, 0, 0, 1]
-                         }
-                        ]
+             "children":[
+                 {
+                     "mesh":"meshes/box.off",
+                     "color":[0.8, 0, 0.8],
+                     "rcoeff":1,
+                     "transform":[0.63754, 0, 0.19491, 0,
+                                  0,       0.66667, 0, 0.82,
+                                  -0.19491, 0, 0.63754, 0,
+                                  0, 0, 0, 1],
+                      "children":[
+                          {
+                              "mesh":"meshes/box.off",
+                              "color":[0.8, 0, 0.8],
+                              "rcoeff":1,
+                              "transform":[0.63754, 0, 0.19491, 0,
+                                           0,       0.66667, 0, 0.82,
+                                           -0.19491, 0, 0.63754, 0,
+                                           0, 0, 0, 1],
+                               "children":[
+                                   {
+                                       "mesh":"meshes/box.off",
+                                       "color":[0.8, 0, 0.8],
+                                       "rcoeff":1,
+                                       "transform":[0.63754, 0, 0.19491, 0,
+                                                    0,       0.66667, 0, 0.82,
+                                                    -0.19491, 0, 0.63754, 0,
+                                                    0, 0, 0, 1]
+                                           }
+                                           ]
+                                    }
+                                    ]
                 }
             ]
-        },
-        {
-            "mesh":"meshes/square.off",
-            "color":[1.0, 0.5, 0.0],
-            "rcoeff":0.5,
-            "transform":[20, 0, 0, 0,
-                         0, 20, 0, 15,
-                         0, 0, 20, 0,
-                         0, 0, 0, 1]
         }
-
     ]
 }
